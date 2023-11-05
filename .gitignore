@@ -1,0 +1,10 @@
+*.pyc
+.idea/*
+
+/Data Analysis/dist/
+/Data Analysis/build/
+/Data Analysis/mr_utils/mr_utils.egg-info/*
+/Data Analysis/mr_utils.egg-info/SOURCES.txt
+/Data Analysis/mr_utils.egg-info/top_level.txt
+/Data Analysis/mr_utils.egg-info/requires.txt
+/Data Analysis/mr_utils.egg-info/PKG-INFO

@@ -1,0 +1,24 @@
+{
+  "COLUMN_NAMES_INPUT": {
+    "COLUMN_NAME_ABSOLUTE_ROTATION_SIZE": "abs_rotation",
+    "COLUMN_NAME_COMPARISON_ACCURACY": "comparison_routine_kb.corr",
+    "COLUMN_NAME_COMPARISON_TYPE": "comparison_type",
+    "COLUMN_NAME_EXP_GROUP": "multi_color",
+    "COLUMN_NAME_MEAN_COMPARISON_ACCURACY": "mean_comparison_accuracy",
+    "COLUMN_NAME_MEAN_COMPARISON_RT": "mean_comparison_rt",
+    "COLUMN_NAME_MEAN_INSPECTION_RT": "mean_inspection_rt",
+    "COLUMN_NAME_MEAN_ROTATION_RT": "mean_rotation_rt",
+    "COLUMN_NAME_RAW_COMPARISON_RT": "comparison_routine_kb.rt",
+    "COLUMN_NAME_RAW_INSPECTION_RT": "inspection_routine_kb.rt",
+    "COLUMN_NAME_RAW_ROTATION_RT": "rotation_routine_kb.rt",
+    "COLUMN_NAME_ROTATION_DELTA": "Delta",
+    "COLUMN_NAME_SESSION_TIMESTAMP": "date",
+    "COLUMN_NAME_TOTAL_ROUTINE_RT": "total_routine_rt",
+    "COLUMN_NAME_UID": "PROLIFIC_PID",
+    "COLUMN_NAME_VALID_TRIALS_PROPORTION": "valid_trials_proportion",
+    "COLUMN_NAME_RAW_ROTATION": "rotation"
+  }
+}
+
+
+

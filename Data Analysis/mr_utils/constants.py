@@ -1,0 +1,80 @@
+COLUMN_NAME_ABSOLUTE_ROTATION_SIZE = 'abs_rotation'
+COLUMN_NAME_COMPARISON_ACCURACY = 'comparison_routine_kb.corr'
+COLUMN_NAME_COMPARISON_TYPE = 'comparison_type'
+COLUMN_NAME_EXP_GROUP = 'multi_color'
+COLUMN_NAME_MEAN_COMPARISON_ACCURACY = 'mean_comparison_accuracy'
+COLUMN_NAME_MEAN_COMPARISON_RT = 'mean_comparison_rt'
+COLUMN_NAME_MEAN_INSPECTION_RT = 'mean_inspection_rt'
+COLUMN_NAME_MEAN_ROTATION_RT = 'mean_rotation_rt'
+COLUMN_NAME_RAW_COMPARISON_RT = 'comparison_routine_kb.rt'
+COLUMN_NAME_RAW_INSPECTION_RT = 'inspection_routine_kb.rt'
+COLUMN_NAME_RAW_ROTATION_RT = 'rotation_routine_kb.rt'
+COLUMN_NAME_ROTATION_DELTA = 'Delta'
+COLUMN_NAME_SESSION_TIMESTAMP = 'date'
+COLUMN_NAME_TOTAL_ROUTINE_RT = 'total_routine_rt'
+COLUMN_NAME_UID = 'PROLIFIC_PID'
+COLUMN_NAME_TRIAL_NUM = 'trial_num'
+COLUMN_NAME_INSPECTION_GRID = 'inspection_grid_idx'
+COLUMN_NAME_INSPECTION_COLOR_SCHEME = 'inspection_color_scheme'
+COLUMN_NAME_INSPECTION_GRID_VARIATION = 'inspection_grid_variation'
+COLUMN_NAME_COMPARISON_GRID = 'comparison_grid_idx'
+COLUMN_NAME_COMPARISON_COLOR_SCHEME = 'comparison_color_scheme'
+COLUMN_NAME_COMPARISON_GRID_VARIATION = 'comparison_grid_variation'
+COLUMN_NAME_ROTATION_SIGN = 'rotation_sign'
+COLUMN_NAME_RAW_COMPARISON_ACCURACY = 'comparison_accuracy'
+COLUMN_NAME_COMPARISON_TYPE = 'comparison_type'
+COLUMN_NAME_RAW_ROTATION = 'rotation'
+
+RECAST_TO_INT_COLS = [COLUMN_NAME_ABSOLUTE_ROTATION_SIZE,
+                      COLUMN_NAME_ROTATION_SIGN,
+                      COLUMN_NAME_INSPECTION_COLOR_SCHEME,
+                      COLUMN_NAME_COMPARISON_COLOR_SCHEME,
+                      COLUMN_NAME_INSPECTION_GRID,
+                      COLUMN_NAME_INSPECTION_GRID_VARIATION,
+                      COLUMN_NAME_COMPARISON_GRID,
+                      COLUMN_NAME_COMPARISON_GRID_VARIATION, ]
+
+COMPARISON_TYPE_LABELS_DICT = dict(zip(
+    range(4),
+    ['Compatible', 'Incompatible Rotation', 'Incompatible Grid',
+     'Incompatible Color Scheme'],
+))
+
+VARIABLES_REPRESENTATIVE_NAMES = {
+    COLUMN_NAME_TRIAL_NUM: 'Trial Number',
+    COLUMN_NAME_ROTATION_SIGN: 'Rotation Sign',
+    COLUMN_NAME_COMPARISON_TYPE: 'Comparison Type',
+    COLUMN_NAME_EXP_GROUP: 'Chromacity',
+    COLUMN_NAME_ABSOLUTE_ROTATION_SIZE: 'Rotation Angle',
+    COLUMN_NAME_INSPECTION_COLOR_SCHEME: 'Inspection Color Scheme',
+    COLUMN_NAME_INSPECTION_GRID: 'Inspection Grid',
+    COLUMN_NAME_INSPECTION_GRID_VARIATION: 'Inspection Grid Variation',
+    COLUMN_NAME_COMPARISON_COLOR_SCHEME: 'Comparison Color Scheme',
+    COLUMN_NAME_COMPARISON_GRID: 'Comparison Grid',
+    COLUMN_NAME_COMPARISON_GRID_VARIATION: 'Comparison Grid Variation',
+    COLUMN_NAME_MEAN_ROTATION_RT: 'Mean Rotation RT',
+    COLUMN_NAME_RAW_INSPECTION_RT: 'Mean Inspection RT',
+    COLUMN_NAME_RAW_ROTATION_RT: 'Mean Rotation RT',
+    COLUMN_NAME_RAW_COMPARISON_RT: 'Mean Comparison RT',
+    COLUMN_NAME_RAW_COMPARISON_ACCURACY: 'Mean Comparison Accuracy',
+}
+
+COLUMN_NAME_VALID_TRIALS_PROPORTION = 'valid_trials_proportion'
+MULTI_COLUMN_NAMES_TASK_STAGES_RT = [COLUMN_NAME_RAW_COMPARISON_RT,
+                                     COLUMN_NAME_RAW_ROTATION_RT,
+                                     COLUMN_NAME_RAW_INSPECTION_RT]
+MULTI_COLUMN_NAMES_UID = [COLUMN_NAME_UID, COLUMN_NAME_EXP_GROUP,
+                          COLUMN_NAME_SESSION_TIMESTAMP]
+
+REPRESENTATIVE_GROUP_LABELS = ['Monochrome', 'Multichrome']
+REPRESENTATIVE_GROUP_LABELS_DICT = dict(
+    zip([False, True], REPRESENTATIVE_GROUP_LABELS))
+
+SCREEN_COLORBLIND_PARTICIPANTS = False
+TEST_KEYS_FREQ = 'freq'
+TEST_KEYS_BAYES = 'bayes'
+T_TEST_KEYS_SEQUENTIAL_BAYES = 'seq_bayes'
+
+CUTOFF_SLOW_RT_RAW_UNITS = 1e4
+DATE_FORMAT = '%Y-%m-%d %Hh%M.%S.%f'
+DATE_FORMAT_FALLBACK = '%Y-%m-%d %Hh%M.%S'
