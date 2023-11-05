@@ -1,5 +1,5 @@
 
-<h1 style="text-align: center; font-weight: bold">Manuscript: Mental rotation of features and conjunctions</h1>
+<h1 style="text-align: center; font-weight: bold">Manuscript: The mental rotation of visual features and feature conjunctions</h1>
 
 ### Corresponding author - [Assaf Weksler](assaf.weksler@gmail.com)
 #### For technical issues - please [open an issue](https://github.com/EitanHemed/mr-colour/issues) or contact [Eitan Hemed](Eitan.Hemed@gmail.com)
@@ -11,8 +11,7 @@
 ---
 ## Repository Structure
 
-The repository is structured as follows:
-1. [Data Analysis](<Data Analysis>) - contains all the code used for the data analysis and figure generation.
+[Data Analysis](<Data Analysis>) - contains all the code used for the data analysis and figure generation.
 
 ---
 
