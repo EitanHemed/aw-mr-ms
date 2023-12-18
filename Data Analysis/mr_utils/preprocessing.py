@@ -5,9 +5,9 @@ from functools import partial
 import numpy as np
 import pandas as pd
 from mr_utils import constants as cn
-from mr_utils.general_utils import find_outlier_rows, remove_duplicate_series, calc_delta
+from mr_utils.general_utils import find_outlier_rows, remove_duplicate_series, calc_delta, coerce_pavlovia_timestamp
 
-DATA_PATH = 'Input Data/raw_data.csv'
+DATA_PATH = 'Experiments/{}/Input Data/{}.csv'
 
 PILOT_SUBJECTS = []
 
@@ -24,16 +24,24 @@ def export_task_files(aggregated_deltas_df: pd.DataFrame, task: pd.DataFrame,
     task.to_csv(f'{data_dir}/Clean.csv')
 
 
-def main(data_dir, screening_set):
-    raw_data = load_data()
-    raw_task, vviq, debrief, demographics = split_data_to_stages(
-        raw_data)
+def main(exp_name, data_dir, screening_set):
+    raw_data = load_data(exp_name)
 
-    demographics = preprocess_demographics(demographics)
-    vviq = preprocess_vviq(vviq, demographics)
-    debrief = preprocess_debrief(debrief, demographics)
+    raw_task, vviq, debrief, demographics = split_data_to_stages(
+        raw_data, exp_name)
+
+    _preprocess_demographics_func, _preprocess_debrief_func = (
+        (preprocess_demographics_e1, preprocess_debrief_e1) if exp_name == 'E1'
+        else (preprocess_demographics_e0, preprocess_debrief_e0)
+    )
+
+    demographics = _preprocess_demographics_func(demographics)
+    debrief = _preprocess_debrief_func(debrief, demographics)
+
     task, quantities_to_report = preprocess_mr_task(raw_task, demographics,
                                                     screening_set)
+
+    vviq = preprocess_vviq(vviq, demographics)
 
     aggregated_deltas_df = aggregate_for_delta_tests(task)
 
@@ -58,10 +66,9 @@ def main(data_dir, screening_set):
     return (task, aggregated_task, aggregated_deltas_df,
             quantities_to_report, vviq, debrief, demographics)
 
-    # Removing pilot participants
 
-
-def load_data() -> pd.DataFrame:
+# Removing pilot participants
+def load_data(exp_name: str) -> dict:
     """
     Load the data, excluding pilot participants and participants which performed
      more than one session.
@@ -71,22 +78,31 @@ def load_data() -> pd.DataFrame:
     :return:
     df: pd.DataFrame containing the data from the experiment.
     """
-    df = pd.read_csv(DATA_PATH)
+    data_dict = {}
 
-    df = df.loc[~df[cn.COLUMN_NAME_UID].isin(PILOT_SUBJECTS)]
+    data_dict['task'] = pd.read_csv(DATA_PATH.format(exp_name, 'raw_data'))
+
+    if exp_name == 'E0':
+        data_dict['ptq'] = pd.read_csv(DATA_PATH.format(exp_name, 'ptq'),
+                                       encoding='utf-8')
+        data_dict['task']['date'] = data_dict['task']['date'].str.replace('24h', '00h')
+        # For E1, the 'date' data is already a timestamp
+        data_dict['task'][cn.COLUMN_NAME_SESSION_TIMESTAMP] = coerce_pavlovia_timestamp(
+             data_dict['task'][cn.COLUMN_NAME_SESSION_TIMESTAMP])
+
+    data_dict['task'] = data_dict['task'].loc[~data_dict['task'][cn.COLUMN_NAME_UID].isin(PILOT_SUBJECTS)]
 
     # One participant completed the experiment twice,
     #  we need to remove the second run.
-    df[cn.COLUMN_NAME_SESSION_TIMESTAMP] = pd.to_datetime(
-        df[cn.COLUMN_NAME_SESSION_TIMESTAMP])
-    df = df.sort_values([cn.COLUMN_NAME_SESSION_TIMESTAMP,
-                         cn.COLUMN_NAME_UID, cn.COLUMN_NAME_TRIAL_NUM])
-    df = remove_duplicate_series(df)
+    data_dict['task'] = data_dict['task'].sort_values([cn.COLUMN_NAME_UID, cn.COLUMN_NAME_TRIAL_NUM])
+    data_dict['task'] = remove_duplicate_series(data_dict['task'])
 
-    return df
+    return data_dict
 
 
-def split_data_to_stages(df: pd.DataFrame) -> typing.Tuple[pd.DataFrame]:
+def split_data_to_stages(data_dict: dict, exp_name) -> typing.Tuple[pd.DataFrame]:
+    df = data_dict['task']
+
     # Remove instructions and columns related to instructions slides
     df = df.loc[:, (df.columns.difference(df.filter(like='inst').columns))]
 
@@ -101,17 +117,12 @@ def split_data_to_stages(df: pd.DataFrame) -> typing.Tuple[pd.DataFrame]:
         df.filter(like='vviq').columns.tolist() +
         cn.MULTI_COLUMN_NAMES_UID]
 
-    debrief = df.loc[(df['open_ended_kb.keys'].notna()) | (
-        df['talk_rather_than_imagine_q2_kb.keys'].notna()),
-                     df.filter(
-                         regex='talk_rather_than_imagine|open_ended_kb|enter_seq_resp').columns.tolist() +
-                     cn.MULTI_COLUMN_NAMES_UID]
-
-    demographics = df.loc[
-        ~pd.isna(df['demog_loop.thisRepN']),
-        df.filter(
-            regex='^demog_que_(.*?)|color_blindness_q_kb').columns.tolist() +
-        cn.MULTI_COLUMN_NAMES_UID]
+    if exp_name == 'E0':
+        debrief = extract_debrief_e0(data_dict['ptq'])
+        demographics = extract_demographics_e0(data_dict['ptq'])
+    else:
+        debrief = extract_debrief_e1(df)
+        demographics = extract_demographics_e1(df)
 
     return mr_task, vviq, debrief, demographics
 
@@ -152,8 +163,9 @@ def preprocess_mr_task(mr_task: pd.DataFrame, demographics: pd.DataFrame,
     mr_task[cn.COLUMN_NAME_COMPARISON_TYPE] = mr_task[
         cn.COLUMN_NAME_COMPARISON_TYPE].map(cn.COMPARISON_TYPE_LABELS_DICT)
 
-    # Change seconds to milliseconds on all columns that have relevant data.
-    mr_task[mr_task.filter(like='rt').columns] *= 1000
+    # Change seconds to milliseconds on all columns with RTs. These are all the columns which contain
+    # the expression 'rt', except 'participant'
+    mr_task.loc[:, mr_task.columns.str.contains('rt') & ~mr_task.columns.str.contains('participant')] *= 1000
 
     # There are three stages in a trial - Inspection, Rotation and Comparison.
     #  We sum the RTs to get a measure of the duration of each trial.
@@ -183,7 +195,7 @@ def preprocess_mr_task(mr_task: pd.DataFrame, demographics: pd.DataFrame,
 
     # Remove RTs on trials where the total RT is above/below 99% of all other
     # trials (individually for each participant)
-    remaining_outlier_trials = mr_task.groupby(cn.COLUMN_NAME_UID).apply(
+    remaining_outlier_trials = mr_task.groupby(cn.COLUMN_NAME_UID, sort=False).apply(
         partial(find_outlier_rows,
                 low_boundary=screening_set['CUTOFF_FAST_RT_CUMULATIVE_FREQ'],
                 high_boundary=screening_set['CUTOFF_SLOW_RT_CUMULATIVE_FREQ']
@@ -197,14 +209,13 @@ def preprocess_mr_task(mr_task: pd.DataFrame, demographics: pd.DataFrame,
 
     # Calculate mean inspection RT for each participant.
     mr_task[cn.COLUMN_NAME_MEAN_INSPECTION_RT] = mr_task.groupby(
-        [cn.COLUMN_NAME_UID])[cn.COLUMN_NAME_RAW_INSPECTION_RT].transform(
+        [cn.COLUMN_NAME_UID], sort=False)[cn.COLUMN_NAME_RAW_INSPECTION_RT].transform(
         'mean')
 
     # Calculate mean RT for each participant on rotation stage, for each
     # rotation level.
     mr_task[cn.COLUMN_NAME_MEAN_ROTATION_RT] = mr_task.groupby(
-        [cn.COLUMN_NAME_UID, cn.COLUMN_NAME_ABSOLUTE_ROTATION_SIZE]
-
+        [cn.COLUMN_NAME_UID, cn.COLUMN_NAME_ABSOLUTE_ROTATION_SIZE], sort=False
     )[cn.COLUMN_NAME_RAW_ROTATION_RT].transform('mean')
 
     # Calculate mean accuracy and mean RT for each participant, for each level
@@ -212,7 +223,7 @@ def preprocess_mr_task(mr_task: pd.DataFrame, demographics: pd.DataFrame,
     mr_task[[cn.COLUMN_NAME_MEAN_COMPARISON_ACCURACY,
              cn.COLUMN_NAME_MEAN_COMPARISON_RT]] = mr_task.groupby(
         [cn.COLUMN_NAME_UID, cn.COLUMN_NAME_ABSOLUTE_ROTATION_SIZE,
-         cn.COLUMN_NAME_COMPARISON_TYPE]
+         cn.COLUMN_NAME_COMPARISON_TYPE], sort=False
     )[[cn.COLUMN_NAME_COMPARISON_ACCURACY,
        cn.COLUMN_NAME_RAW_COMPARISON_RT]].transform(
         'mean')
@@ -226,7 +237,7 @@ def preprocess_mr_task(mr_task: pd.DataFrame, demographics: pd.DataFrame,
     # Count the proportion of valid trials per participant
     mr_task[cn.COLUMN_NAME_VALID_TRIALS_PROPORTION] = (
         mr_task.groupby(
-            cn.COLUMN_NAME_UID)[cn.COLUMN_NAME_TOTAL_ROUTINE_RT].transform(
+            [cn.COLUMN_NAME_UID], sort=False)[cn.COLUMN_NAME_TOTAL_ROUTINE_RT].transform(
             lambda s: (~s.isna()).mean()))
 
     poor_performance_participants = mr_task.loc[
@@ -241,17 +252,18 @@ def preprocess_mr_task(mr_task: pd.DataFrame, demographics: pd.DataFrame,
     removed_data[
         'poor_performance_participants_N'] = poor_performance_participants.size
 
+    removed_data['total_data_removed_%'] = (100 * (
+            mr_task[cn.COLUMN_NAME_TOTAL_ROUTINE_RT].isna()
+            | (mr_task[cn.COLUMN_NAME_UID].isin(
+        poor_performance_participants))).mean())
+
     mr_task = mr_task.loc[~mr_task[cn.COLUMN_NAME_UID].isin(
         poor_performance_participants)]
 
-    # Finally, sort by date of session
     mr_task = mr_task.sort_values(cn.COLUMN_NAME_SESSION_TIMESTAMP)
 
     removed_data['color_blind_participants'] = (
-            demographics['color_blindness'] == "None").sum()
-
-    removed_data['total_data_removed_%'] = 100 * mr_task[
-        cn.COLUMN_NAME_TOTAL_ROUTINE_RT].isna().mean()
+            demographics['color_blindness'] != "None").sum()
 
     return drop_color_blind_participants(mr_task, demographics), removed_data
 
@@ -273,7 +285,7 @@ def preprocess_vviq(df: pd.DataFrame, demographics: pd.DataFrame
                                          demographics)
 
 
-def preprocess_demographics(df):
+def preprocess_demographics_e1(df):
     color_blindness = df['color_blindness_q_kb.keys'].map(
         dict(zip(range(1, 9),
                  ("None",
@@ -298,7 +310,60 @@ def preprocess_demographics(df):
         sex=sex, age=age, color_blindness=color_blindness)
 
 
-def preprocess_debrief(df: pd.DataFrame, demographics: pd.DataFrame):
+def preprocess_demographics_e0(df):
+    color_blindness = df['האם הנך סובל מעוורון צבעים?'].map(
+        {"לא": 'None',
+         }).fillna('Yes').astype('category')
+
+    sex = df['מין'].map({'זכר': 'Male', 'נקבה': 'Female'}
+                        ).astype('category')
+
+    age = df['גיל'].copy()
+
+    df = df[[cn.COLUMN_NAME_UID, cn.COLUMN_NAME_SESSION_TIMESTAMP]].assign(
+        sex=sex, age=age, color_blindness=color_blindness)
+
+    df[cn.COLUMN_NAME_SESSION_TIMESTAMP] = pd.to_datetime(df[cn.COLUMN_NAME_SESSION_TIMESTAMP].str.replace('EET', ' '))
+
+    df = df.loc[~df[cn.COLUMN_NAME_UID].isnull()]
+
+    df[cn.COLUMN_NAME_EXP_GROUP] = (df[cn.COLUMN_NAME_UID].astype(int) % 2 == 0)
+
+    df = df.sort_values([cn.COLUMN_NAME_UID, cn.COLUMN_NAME_SESSION_TIMESTAMP])
+
+    # Drop non-first sessions, by participant id
+    df = df.loc[~df[cn.COLUMN_NAME_UID].duplicated()]
+
+    return df
+
+
+def preprocess_debrief_e0(df: pd.DataFrame, demographics: pd.DataFrame):
+    df = df.rename({'האם הייתה לך אסטרטגיה ספציפית לסיבוב הצורות בדמיונך?':
+                        "Did you have any specific strategy to rotate the squares in your mind's eye?",
+                    "מה לדעתך הייתה מטרת הניסוי?":
+                        "What do you think was the goal of the experiment?",
+                    "האם יש לך שאלות או הערות כלליות על הניסוי?":
+                        "Do you have any questions or general comments on the experiment?",
+                    'האם לעתים תארת לעצמך במילים את הגירוי במקום לסובב את התמונה בעיני רוחך? (למשל, לומר לעצמך "המלבן נמצא למטה והריבועים למעלה")':
+                        "Did you on some occasions described in words the stimulus instead of rotating the images in your mind's eye?",
+                    "במידה ולעתים תארת לעצמך במילים את הגירוי, בכמה מצעדי הניסוי עשית זאת -": "talk_rather_than_imagine",
+                    }, axis=1)
+
+    df['talk_rather_than_imagine'] = df['talk_rather_than_imagine'].astype('category').values
+
+    df[cn.COLUMN_NAME_SESSION_TIMESTAMP] = pd.to_datetime(df[cn.COLUMN_NAME_SESSION_TIMESTAMP].str.replace('EET', ' '))
+
+    df = df.sort_values([cn.COLUMN_NAME_UID, cn.COLUMN_NAME_SESSION_TIMESTAMP])
+
+    # Drop non-first sessions, by participant id
+    df = df.loc[~df[cn.COLUMN_NAME_UID].duplicated()]
+
+    df[cn.COLUMN_NAME_EXP_GROUP] = (df[cn.COLUMN_NAME_UID].astype(int) % 2 == 0)
+
+    return drop_color_blind_participants(df, demographics)
+
+
+def preprocess_debrief_e1(df: pd.DataFrame, demographics: pd.DataFrame):
     talk_rather_than_imagine = df['talk_rather_than_imagine_q2_kb.keys'].map(
         dict(zip(range(1, 7),
                  [f'{n}%' for n in range(0, 120, 20)]))
@@ -339,25 +404,31 @@ def preprocess_debrief(df: pd.DataFrame, demographics: pd.DataFrame):
 
 def drop_color_blind_participants(df, demographics):
     if cn.SCREEN_COLORBLIND_PARTICIPANTS:
-        return df.loc[~df[cn.COLUMN_NAME_UID].isin()(
+        return df.loc[(~df[cn.COLUMN_NAME_UID].isin((
             demographics.loc[demographics['color_blindness'] != 'None',
-            cn.COLUMN_NAME_UID].unique())]
+            cn.COLUMN_NAME_UID].unique())))]
     return df
 
-# TODO all of the following should be put in a own general utilities module
-################################################################################
-###############################GENERAL UTILITY FUNCTIONS########################
-################################################################################
-# TODO This function should take the formats, and should fail if nans are found
-# Also this seems to be redundant as the dates on the pooled data are
-# already date-time.
+
+def extract_debrief_e1(df: pd.DataFrame):
+    return df.loc[(df['open_ended_kb.keys'].notna()) | (
+        df['talk_rather_than_imagine_q2_kb.keys'].notna()),
+                  df.filter(
+                      regex='talk_rather_than_imagine|open_ended_kb|enter_seq_resp').columns.tolist() +
+                  cn.MULTI_COLUMN_NAMES_UID]
 
 
-# TODO This function should take a series not a dataframe
+def extract_debrief_e0(df: pd.DataFrame):
+    return df.iloc[:, :7]
 
 
-# TODO This function should be generalized
+def extract_demographics_e1(df):
+    return df.loc[
+        ~pd.isna(df['demog_loop.thisRepN']),
+        df.filter(
+            regex='^demog_que_(.*?)|color_blindness_q_kb').columns.tolist() +
+        cn.MULTI_COLUMN_NAMES_UID]
 
 
-# TODO Finish docstring. Add a base-level option, if there are more than two
-#  levels.
+def extract_demographics_e0(df):
+    return df.iloc[:, [0, 1] + list(range(7, df.shape[1]))]

@@ -7,32 +7,37 @@ from mr_utils import preprocessing, reporting, analysis, plot_data, plot_illustr
 
 def main():
     screening_parameters_dicts = load_screening_sets()
+    exps = ['E0', 'E1']
 
-    for k, v in screening_parameters_dicts.items():
-        figures_dir, texts_dir, data_dir = prep_output_dirs(k, v)
+    for exp in exps:
 
-        task, aggregated_task, \
-            deltas, quantities_to_report, vviq, debrief, demographics = (
-            preprocessing.main(data_dir, v))
+        for k, v in screening_parameters_dicts.items():
+            figures_dir, texts_dir, data_dir = prep_output_dirs(exp, k, v)
 
-        results_dict, sequential_bf_results = analysis.main(task, deltas)
+            task, aggregated_task, \
+                deltas, quantities_to_report, vviq, debrief, demographics = (
+                preprocessing.main(exp, data_dir, v))
 
-        reporting.main(texts_dir, demographics, quantities_to_report,
-                       results_dict,
-                       v)
+            results_dict, sequential_bf_results = analysis.main(task, deltas)
 
-        plot_data.main(figures_dir, aggregated_task, deltas, sequential_bf_results, task)
+            reporting.main(texts_dir, demographics, quantities_to_report,
+                           results_dict,
+                           v)
 
-        plot_illustration.main('Output/illustration')
+            plot_data.main(figures_dir, aggregated_task, deltas, sequential_bf_results, task)
+
+    plot_illustration.main('Experiments/Illustration')
 
 
-def prep_output_dirs(param_set_name, param_set):
+def prep_output_dirs(exp_name, param_set_name, param_set):
     """
     Prepares output directories for the given screening set and saves the
     set of screening parameters inside the directory.
 
     Parameters
     ----------
+    exp_name: str
+        The name of the experiment.
     param_set_name: str
         The name of the set of screening parameters. Doesn't have to be unique.
     param_set: dictionary
@@ -49,7 +54,7 @@ def prep_output_dirs(param_set_name, param_set):
         param_set, sort_keys=True).encode('utf-8')
     hashed_screening_set = hashlib.md5(screening_set_json).hexdigest()
 
-    output_dir = f'Output/Analyses/{hashed_screening_set}'
+    output_dir = f'Experiments/{exp_name}/Output/Analyses/{hashed_screening_set}'
     output_subdirs = [f'{output_dir}/{d}'
                       for d in ['Figures', 'Texts', 'Data']]
     for _dir in output_subdirs:

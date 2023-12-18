@@ -35,13 +35,15 @@ def find_outlier_rows(df: pd.DataFrame, low_boundary: float,
 
     """
     return ~df[cn.COLUMN_NAME_TOTAL_ROUTINE_RT].between(
-        *df[cn.COLUMN_NAME_TOTAL_ROUTINE_RT].quantile(
-            q=(low_boundary, high_boundary),
-            interpolation='nearest'
-        ).values)
+        df[cn.COLUMN_NAME_TOTAL_ROUTINE_RT].quantile(
+            q=low_boundary, interpolation='higher'),
+        df[cn.COLUMN_NAME_TOTAL_ROUTINE_RT].quantile(
+            q=high_boundary, interpolation='lower'))
+
 
 
 def remove_duplicate_series(df):
+
     # TODO - this needs to be generalized
     second_run_sessions = (
         df.loc[df.groupby(cn.COLUMN_NAME_UID)[

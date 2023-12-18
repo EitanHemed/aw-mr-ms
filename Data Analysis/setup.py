@@ -34,8 +34,8 @@ setuptools.setup(
     package_dir={"mr_utils": "mr_utils"},
     packages=setuptools.find_packages(where="mr_utils"),
     python_requires="==3.9.12",
-    install_requires=['robusta-stats==0.0.4', 'matplotlib==3.7.1', 'scipy==1.10.1',
-                      'seaborn==0.12.2', 'tabulate==0.9.0'],
+    install_requires=['robusta-stats==0.0.4', 'matplotlib', 'scipy',
+                      'seaborn', 'tabulate'],
     cmdclass={
         'develop': PostDevelopCommand,
     },

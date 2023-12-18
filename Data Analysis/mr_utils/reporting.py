@@ -4,8 +4,8 @@ import numpy as np
 
 from mr_utils import constants as cn
 
-def main(path, demographics, screening_dict, results_dict, screening_set):
 
+def main(path, demographics, screening_dict, results_dict, screening_set):
     with open(f'{path}/report.txt', 'w', encoding='utf-8') as f:
 
         print("Participants:", file=f)
@@ -32,16 +32,16 @@ def main(path, demographics, screening_dict, results_dict, screening_set):
 
             print(descriptives.to_markdown(
                 tablefmt="grid", index=False),
-                  file=f)
+                file=f)
             print("\n", file=f)
 
         # Between groups Deltas t-test
         directionality = (results_dict['t_tests']['deltas']
-                                       ['between-groups']['freq'].tail)
+                          ['between-groups']['freq'].tail)
         print(f"RT Deltas Between groups Welch T-test ({directionality})",
               file=f)
         print(gen_ttest_report(results_dict['t_tests']['deltas']
-                                       ['between-groups']), file=f)
+                               ['between-groups']), file=f)
         print("\n", file=f)
 
         # Within groups Deltas t-test
@@ -52,12 +52,14 @@ def main(path, demographics, screening_dict, results_dict, screening_set):
             print(gen_ttest_report(v), file=f)
             print("\n", file=f)
 
+
 def gen_demographics_report(demographics):
     color_blindness_exclusion_stub = (
-        ' (excluding data from participants which registered to the experiment, '
-        'but reported during the demographics questionnaire '
+        f' (excluding data from {demographics["color_blindness"].sum():.2f} participants in the Multi-chrome group; '
+        f'These participants registered to the experiment, '
+        'but following the experiment reported on the demographics questionnaire '
         'that they suffer from color-blindness)'
-        if cn.SCREEN_COLORBLIND_PARTICIPANTS else '')
+        if cn.SCREEN_COLORBLIND_PARTICIPANTS and demographics['color_blindness'].sum() else '')
     return (
         f"We collected data from {demographics.shape[0]} participants"
         f'{color_blindness_exclusion_stub}. '
@@ -71,6 +73,7 @@ def gen_demographics_report(demographics):
         'remotely using Pavlovia. Participants received £7.5 (GBP) as an '
         'hourly rate, in addition to an optional bonus (see below). '
     )
+
 
 def gen_screening_report(screening_dict, screening_set):
     return (
@@ -96,6 +99,7 @@ def gen_screening_report(screening_dict, screening_set):
         f"single trials or whole participants."
     )
 
+
 def gen_anova_report(anovas_dict):
     bayes_anova_text = anovas_dict[cn.TEST_KEYS_BAYES].report_text()
 
@@ -111,6 +115,7 @@ def gen_anova_report(anovas_dict):
 
     complete_anova_report = ''.join(anova_terms)
     return complete_anova_report
+
 
 def prettify_robusta_bayesian_anova_str(s: str):
     terms = re.findall(r"[^[]*\[([^]]*)\]", s)
@@ -142,21 +147,22 @@ def prettify_robusta_frqeuentist_anova_str(s: str) -> str:
 
     return s
 
-def gen_ttest_report(tests_dict: dict):
 
+def gen_ttest_report(tests_dict: dict):
     freq = tests_dict['freq']
     bayes = tests_dict['bayes']
 
     freq_text = freq.report_text(effect_size=True)
     bayes_results = bayes.report_table().T.to_dict()[0]
 
-    bayes_text = (f"BF1:0 = {bayes_results['bf']:.4f} " 
-                 f", Error = {bayes_results['error']:.2f}")
+    bayes_text = (f"BF1:0 = {bayes_results['bf']:.4f} "
+                  f", Error = {bayes_results['error']:.2f}")
     bayes_text = bayes_text.replace("Error = 0.00", "Error <= 0.001%")
 
     test_text = f"{freq_text}, {bayes_text}"
 
     return test_text
+
 
 def gen_rotation_report_table(df):
     df.groupby([cn.COLUMN_NAME_UID])['Delta'].agg(
@@ -175,8 +181,3 @@ def prettify_descriptives(aggregated_test_data):
     desc = desc.rename(columns=cn.VARIABLES_REPRESENTATIVE_NAMES)
 
     return desc
-
-
-
-
-
